@@ -1,0 +1,1 @@
+print(len(bytes("!|0x00000","utf-8")))
