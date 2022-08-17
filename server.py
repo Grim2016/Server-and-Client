@@ -11,15 +11,21 @@ def handle_client(cclient: socket.socket,caddress):
     Handles client requests
     """
     print("New thread")
-    while True:
-        header = cclient.recv(9)
+    connected = True
+    while connected:
+        header = cclient.recv(10)
         header_string = header.decode("utf-8")
         print(header_string)
-        if header_string.split("|")[0] == "1":
+
+
+        #Handles sending messages to the server
+        if header_string.split("|")[0] == "01":
             msg=cclient.recv(int(header_string.split("|")[1],0))
             print(msg.decode("utf-8"))
-        if header_string.split("|")[0] == "C":
-            break
+        #Handles disconnecting server
+        if header_string.split("|")[0] == " C":
+            cclient.close()
+            connected = False
 
 while True:
     client, address = s.accept()
