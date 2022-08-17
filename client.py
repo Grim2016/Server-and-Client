@@ -7,10 +7,10 @@ s.connect((socket.gethostname(),6969))
 while True:
     try:
         t = input("Msg: ")
-        header = header_creator("0",t)
+        header = header_creator("01",t)
         s.send(header)
         s.send(bytes(t,"utf-8"))
     except KeyboardInterrupt:
-        s.send(header_creator("C",""))
+        s.send(header_creator(" C",""))
         s.close()
         break
