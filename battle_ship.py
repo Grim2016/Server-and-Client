@@ -4,7 +4,7 @@ pygame.init()
 
 MAIN_WINDOW = pygame.display.set_mode([720, 750])
 sea_square = pygame.image.load("Pictures/196190_hav_None.png").convert()
-
+POSSIBLE_POSITIONS = [pos for pos in range(0,MAIN_WINDOW.get_width()+72,72)]
 class Ship:
     """
     Class representing the ships
@@ -12,24 +12,51 @@ class Ship:
     def __init__(
             self, image: str, length: int, screen: pygame.Surface, #Nondefault params
             name: str="None") -> None:
-        self.image: pygame.Surface = pygame.image.load(image).convert_alpha()
-        self.pos: int
+        self._base_image: pygame.Surface = pygame.image.load(image).convert_alpha()
         self.in_view: bool = False
         self.length: int = length
         self.name: str = name
         self.screen: pygame.Surface = screen
+        self.temp_pos: list = [0,0]
+        self.pos: list = [0,0]
+        self.pointing: str = "up"
+        self.possible_x: list = POSSIBLE_POSITIONS
+        self.possible_y: list = POSSIBLE_POSITIONS[:-self.length+1]
+        self.angle: int = 0
     def draw_ship(self):
         """
         Draws ship if it is in view
         """
         if self.in_view:
-            for x_coord in range(0,self.screen.get_width()+72,72):
-                for y_coord in range(0,self.screen.get_height()-30,72):
-                    if self.pos[0] < x_coord and self.pos[1] < y_coord:
-                        self.screen.blit(self.image,(x_coord-72,y_coord-72))
-                        break
-                if self.pos[0] < x_coord:
-                    break
+            self.screen.blit(pygame.transform.rotate(self._base_image, self.angle),(self.pos[0]*72,self.pos[1]*72))
+    def __str__(self) -> str:
+        return f"{self.name}: {self.pos[0]},{self.pos[1]}, Supposed to be displayed: {self.in_view}"
+    
+    def change_possible_pos(self, direction):
+        print(direction)
+        self.pointing = direction
+        if (self.pointing == "up" or "down") and self.pos[1] > 10-self.length:
+            self.pos[1] = 10-self.length
+        elif (self.pointing == "left" or "right") and self.pos[0] > 10-self.length:
+            self.pos[0] = 10-self.length
+        
+        if self.pointing == "left":
+            print("E")
+            self.possible_x = POSSIBLE_POSITIONS[:-self.length+1]
+            self.possible_y = POSSIBLE_POSITIONS
+            self.angle = 90
+        elif self.pointing == "right":
+            self.possible_x = POSSIBLE_POSITIONS[:-self.length+1]
+            self.possible_y = POSSIBLE_POSITIONS
+            self.angle = 270
+        elif  self.pointing == "up":
+            self.possible_x = POSSIBLE_POSITIONS
+            self.possible_y = POSSIBLE_POSITIONS[:-self.length+1]
+            self.angle = 0
+        elif self.pointing == "down":
+            self.possible_x = POSSIBLE_POSITIONS
+            self.possible_y = POSSIBLE_POSITIONS[:-self.length+1]
+            self.angle = 180
 
 class ShipButton:
     """
@@ -101,9 +128,7 @@ fail_time: int
 failed = False
 while True:
     MAIN_WINDOW.fill((90,90,90))
-    
-    #Creates the grid
-    for i in range(0,MAIN_WINDOW.get_width(),72):
+    for i in range(0,MAIN_WINDOW.get_width(),72): #Creates the grid
         for j in range(0,MAIN_WINDOW.get_height()-30,72):
             MAIN_WINDOW.blit(sea_square,(i,j))
     #Get events
@@ -111,18 +136,51 @@ while True:
         #print(event)
         if event.type == pygame.QUIT:
             pygame.quit()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT:
+                current_ship.change_possible_pos("right")
+            if event.key == pygame.K_LEFT:
+                current_ship.change_possible_pos("left")
+            if event.key == pygame.K_UP:
+                current_ship.change_possible_pos("up")
+            if event.key == pygame.K_DOWN:
+                current_ship.change_possible_pos("down")
         if event.type == pygame.MOUSEBUTTONUP:
-            if pygame.mouse.get_pos()[1] > 720: 
+            if pygame.mouse.get_pos()[1] > 720: #Check if buttons are pressed
                 Saul_button.mouse_pos_in_button(pygame.mouse.get_pos())
                 Walter_button.mouse_pos_in_button(pygame.mouse.get_pos())
                 Mike_button.mouse_pos_in_button(pygame.mouse.get_pos())
                 Jesse_button.mouse_pos_in_button(pygame.mouse.get_pos())
             elif (current_ship.name != "None"
-                    and pygame.mouse.get_pos()[1] < MAIN_WINDOW.get_height()-30-(
-                        current_ship.length-1
-                        )*72):
-                current_ship.pos = pygame.mouse.get_pos()
-                current_ship.in_view = True
+                    and pygame.mouse.get_pos()[1] < MAIN_WINDOW.get_height()-30):
+                mouse_pos = pygame.mouse.get_pos()
+                for i in current_ship.possible_y:
+                    if mouse_pos[1] <=i:
+                        current_ship.temp_pos[1] = i/72-1
+                        x_failed = False
+                        break
+                    else:
+                        x_failed = True
+                
+                for i in current_ship.possible_x:
+                    if mouse_pos[0] <= i:
+                        current_ship.temp_pos[0] = i/72-1
+                        y_failed = False
+                        break
+                    else:
+                        y_failed = True
+                
+                if x_failed or y_failed:
+                    failed = True
+                    fail_time = pygame.time.get_ticks()
+                    current_ship.temp_pos = current_ship.pos
+                    x_failed, y_failed = False, False
+                else:
+                    print("Didn't fail")
+                    current_ship.pos = current_ship.temp_pos
+                    current_ship.in_view = True
+                    print(current_ship)
+                    
             elif (current_ship.name != "None"
                     and pygame.mouse.get_pos()[1] > MAIN_WINDOW.get_height()-30-(
                             current_ship.length-1
